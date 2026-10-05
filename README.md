@@ -1,112 +1,93 @@
-# MSCS 634 - Lab 2: Classifying Wines with KNN and Radius Neighbors
+# MSCS 634 - Lab 3: Clustering Wine Data with K-Means and K-Medoids
 
-For this lab I used the Wine dataset that comes built into scikit-learn to compare two
-classifiers that both rely on "nearby" data points, but define nearby in different ways.
-The dataset has 178 wine samples, each described by 13 chemical measurements, and every
-wine belongs to one of three classes. My job was to run both models with several settings,
-track how the accuracy changed, and figure out which approach fits this data better.
+In this lab I worked on clustering. In Lab 2 the model could see the correct labels when it
+learned. This lab is different. The algorithm does not get any labels. It has to find the groups
+by itself. I used the Wine dataset from scikit-learn. It has 178 wines, 13 chemical values for
+each wine, and 3 real wine types. I ran two clustering methods on this data and then checked how
+good the groups are.
 
-## The question I was trying to answer
+## What I wanted to do
 
-Both models classify a wine by looking at similar wines and taking a vote. The difference
-is how they decide which wines count as "similar":
+Both methods try to make 3 groups from the wines. The difference is how they pick the center of
+each group.
 
-- **K-Nearest Neighbors (KNN)** looks at a fixed *number* of the closest wines. I tested
-  k = 1, 5, 11, 15, and 21.
-- **Radius Neighbors (RNN)** looks at every wine inside a fixed *distance*. I tested
-  radius = 350, 400, 450, 500, 550, and 600.
+- **K-Means** uses the average point of a group as the center. This center is called a centroid.
+  It is not a real wine, it is just an average.
+- **K-Medoids** uses a real wine from the data as the center. This center is called a medoid.
 
-For each setting I trained on 80% of the samples (142 wines), tested on the remaining 20%
-(36 wines), and recorded the accuracy so I could plot and compare the two.
+I used `k = 3` for both methods, because the dataset has 3 types. I checked the results with two
+scores:
 
-## What's in this repo
+- **Silhouette Score**: it tells how tight and how separate the groups are. Higher is better.
+- **Adjusted Rand Index (ARI)**: it tells how close the groups are to the real wine types. Higher
+  is better. The methods do not see the real types during clustering. I only use the real types at
+  the end, to check the result.
 
-- `MSCS_634_Lab_2.ipynb` - the notebook with all the code, printed results, plots, and my
-  written analysis.
-- `README.md` - this summary.
+## Files in this repo
 
-## Running the notebook
+- `MSCS_634_Lab_3.ipynb` - the notebook. It has all the code, the scores, the plots, and my
+  comparison.
+- `README.md` - this file.
 
-Install the libraries and open it:
+## How to run
 
 ```bash
 pip install scikit-learn pandas numpy matplotlib jupyter
-jupyter notebook MSCS_634_Lab_2.ipynb
+jupyter notebook MSCS_634_Lab_3.ipynb
 ```
 
-Run the cells top to bottom. The split uses a fixed random seed (42), so you'll get the
-same numbers I did every time.
+Run the cells from top to bottom. I used a fixed random seed (42), so the scores are the same every
+time you run it. One important point: the notebook does not need any K-Medoids library. I wrote the
+K-Medoids code by myself inside the notebook, so you do not need to install anything extra.
 
-## The accuracy I measured
+## The scores I got
 
-KNN, by number of neighbors:
+| Method    | Silhouette Score | Adjusted Rand Index |
+|-----------|------------------|---------------------|
+| K-Means   | 0.2849           | 0.8975              |
+| K-Medoids | 0.2676           | 0.7411              |
 
-| k  | Accuracy |
-|----|----------|
-| 1  | 0.7778   |
-| 5  | 0.8056   |
-| 11 | 0.8056   |
-| 15 | 0.8056   |
-| 21 | 0.8056   |
+## What I learned
 
-RNN, by radius:
+**K-Means made better groups.** Its Silhouette score was a little higher (0.285 vs 0.268). So its
+groups were a bit more tight and more separate. The bigger difference was in the ARI. K-Means got
+0.90 and K-Medoids got 0.74. ARI shows how well the groups match the real wine types. So this means
+K-Means found the 3 real types much better, even when it did not see the labels.
 
-| radius | Accuracy |
-|--------|----------|
-| 350    | 0.7222   |
-| 400    | 0.6944   |
-| 450    | 0.6944   |
-| 500    | 0.6944   |
-| 550    | 0.6667   |
-| 600    | 0.6667   |
+**The plots show the reason.** Both methods made 3 groups in almost the same places. So they mostly
+agree. The main difference is the center of each group. The K-Means center sits in the middle of the
+color group, because it is just an average. The K-Medoids center is a real wine, so it moves a
+little to the side, to the place where a real data point is. Because of this, some wines near the
+border go to a different group in the two methods. These border wines are the reason the K-Medoids
+ARI is lower.
 
-For reference, always guessing the most common class (the baseline) only gets 0.3889, so
-both models are doing real work.
+**When to use each method.** K-Means is good when the data is clean and the groups have a shape
+close to round. The standardized Wine data is like this. K-Means is also fast and simple. But its
+average center can move a lot when there are outliers. K-Medoids is better when the data has noise
+or strange points. Its center must be a real wine, and it uses normal distance, not squared
+distance. So one strange point can not pull the center far away. It is also useful when you want a
+real data point as the example of the group. But for this clean data, K-Means was better.
 
-## What the trends told me
+## My decisions and problems
 
-**KNN improved and then flattened out.** The worst result was k = 1 at about 0.78. That
-fits what you'd expect, because with a single neighbor the prediction just copies whatever
-one wine sits closest, and one strange point can swing the whole answer. Bumping k up to 5
-raised accuracy to about 0.81, and from there it didn't budge for k = 11, 15, or 21. Once
-there were enough neighbors to average out the noise, piling on more made no difference.
+**Standardizing was very important, not optional.** Before scaling, the `proline` feature has
+values more than 1000, but most other features are small (one or two digits). Clustering uses
+distance, so this one big feature would control almost everything. I used z-score standardizing
+(minus the mean, then divide by the standard deviation). After this, every feature has mean 0 and
+standard deviation 1. So all 13 features get a fair chance.
 
-**RNN got worse as the radius grew.** Its best score was actually at the *smallest* radius
-(350, around 0.72), and it drifted downward as the radius widened, ending near 0.67. This
-makes sense once you picture it: a wider radius sweeps in more far-away wines, some from
-other classes, so the vote gets muddied and the model leans toward the majority class.
+**I had to write K-Medoids by myself.** Normal scikit-learn does not have K-Medoids. The usual extra
+library (`scikit-learn-extra`) did not even import with the new NumPy 2 version. I did not want to
+downgrade all my libraries, so I wrote the algorithm directly in the notebook. The idea is simple:
+give each wine to its nearest medoid, then change each medoid to the best point inside its group,
+and repeat this until it stops changing. In this way the notebook runs anywhere and needs nothing
+extra.
 
-**KNN came out ahead overall**, roughly 0.81 at its best against 0.67 to 0.72 for RNN. The
-reason comes down to how each one gathers neighbors. KNN always takes the same fixed number,
-so every wine gets an equally sized, balanced vote wherever it sits. RNN takes everything
-inside a set distance, which means it grabs too many points in crowded areas and too few in
-empty ones. On top of that, the `proline` measurement is far larger than any other feature
-in the raw data, so distance is basically decided by proline alone, and that turns the
-radius rule into a fairly crude filter.
+**I made the 13 dimensions into 2 for the plots.** We can not draw 13 dimensions, so I used PCA to
+bring the data to 2 directions that hold the most information. I used this only for the picture. The
+clustering still used the full 13 dimensions. These 2 PCA axes keep about 55% of the total
+variation, which is enough to see the groups clearly.
 
-**When each one makes more sense.** I'd reach for KNN when I don't know a good distance
-cutoff or when different parts of the data are packed more tightly than others, since a
-fixed count stays steady in both cases. RNN is a better fit when the data is spread out
-evenly, you already know a reasonable distance to use, or you actually want the model to
-react to how dense an area is (or to flag oddball points that have no neighbors nearby). It
-also really needs the features on similar scales to behave, which they aren't here.
-
-## Decisions I made and things I had to sort out
-
-**I left the features unscaled on purpose.** This was the biggest call in the whole lab.
-The radius values I was told to use (350 to 600) only line up with the *raw* data, where
-distances stretch up to about 1400 and average around 350. If I had standardized the
-features first, every distance would collapse into roughly the 0 to 12 range, and a radius
-of 350 would just pull in the entire dataset, which would make RNN pointless. Keeping the
-data raw was the only way those specific radius numbers made any sense.
-
-**I guarded RNN against empty neighborhoods.** A `RadiusNeighborsClassifier` throws an
-error if a test wine has zero training wines inside its radius, which can happen with the
-smaller radii. I set `outlier_label='most_frequent'` so it quietly falls back to the
-majority class instead of crashing. With my exact split no wine actually ended up stranded,
-but the safety net keeps the code from breaking if the split or the radius changes.
-
-**I made the results repeatable and balanced.** I fixed the random seed at 42 so the split
-is identical on every run, and I used stratified sampling so the small test set keeps the
-same class proportions as the full dataset instead of over- or under-representing a class by
-luck.
+**I fixed the random seed.** Both methods start from random points. So I set the seed to 42 and ran
+each method many times, then kept the best result. This makes the scores stable and same in every
+run.
